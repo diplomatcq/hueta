@@ -1,1 +1,49 @@
-123
+#Функция для вывода справки 
+display_help() {
+ echo "Использование: $0 [исходный каталог] [каталог_резервных копий]" 
+ echo "Пример: $0 /home/usr /storage/backups" 
+ echo "Опции:" 
+ echo " --help  Показать это сообщение справки"
+ exit 1
+}
+
+# Проверка опций командной строки
+if [ "$1" = "--help" ]; then
+  display_help
+fi
+
+# Присваиваем аргументы переменным
+source_dir=$1
+backup_dir=$2
+
+# Проверяем существование исходного каталога
+if [ ! -d "$source_dir" ]; then
+    echo "Ошибка: Исходный каталог '$source_dir' не найден!"
+    exit 1
+fi
+
+# Проверяем существование каталога для резервных копий
+if [ ! -d "$backup_dir" ]; then
+    mkdir -p "$backup_dir"
+fi
+
+# Проверяем наличие второго аргумента (каталог резервных копий)
+if [ -z "$backup_dir" ]; then
+    echo "Ошибка: Не указан каталог для резервных копий!"
+    exit 1
+fi
+
+# Выполняем резервное копирование с использованием tar
+backup_file="$backup_dir/backup_$(date +%Y%m%d_%H%M%S).tar.gz"
+tar -czf "$backup_file" -C "$source_dir" . || { echo "Ошибка: Резервное копирование не удалось!"; exit 1; }
+
+#Проверяем количество имеющихся резервных копий и, если их больше 10, удаляем старые копии, оставляя только 10 последних 
+backup_count=$(ls -t "$backup_dir" | wc -l) 
+if [ "$backup_count" -gt 10 ]; then
+    old_backups=$(ls -t "$backup_dir" | tail -n +11) 
+    for old_backup in $old_backups; do
+         rm "$backup_dir/$old_backup"
+    done
+fi
+
+echo "Резервное копирование успешно: $backup_file"
